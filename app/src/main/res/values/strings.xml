@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">ClipPulse</string>
+    <string name="tagline">Automated AI Twitch Highlight Studio</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="tab_highlights">Highlights</string>
+    <string name="tab_streams">Streams</string>
+    <string name="action_new_scan">New Scan</string>
+    <string name="action_scan_video">Scan VOD Video</string>
+    <string name="action_scan_chat">Analyze Chat &amp; URL</string>
+    <string name="empty_clips_title">No highlight clips yet</string>
+    <string name="empty_clips_body">Pick a Twitch stream recording or paste a VOD chat log and let AI pinpoint your most viral moments automatically.</string>
+    <string name="empty_streams_title">No streams scanned yet</string>
+    <string name="empty_streams_body">Your analyzed Twitch VODs, stream recordings, and chat logs will appear here with peak hype ratings.</string>
+    <string name="clip_studio_title">Clip Studio</string>
+    <string name="export_mp4_clip">Export &amp; Share MP4</string>
+    <string name="share_clip_summary">Share Highlight Card</string>
+    <string name="save_changes">Save Changes</string>
+</resources>

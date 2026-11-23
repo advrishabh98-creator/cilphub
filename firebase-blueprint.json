@@ -1,0 +1,185 @@
+{
+  "entities": {
+    "StreamAnalysis": {
+      "title": "StreamAnalysis",
+      "description": "Metadata and AI analysis summary for a scanned Twitch stream or VOD recording.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID of the owner."
+        },
+        "title": {
+          "type": "string",
+          "description": "Stream or VOD title."
+        },
+        "channelName": {
+          "type": "string",
+          "description": "Twitch channel handle."
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": ["VIDEO_FILE", "CHAT_TRANSCRIPT", "TWITCH_URL"],
+          "description": "Origin of the scanned stream content."
+        },
+        "sourceRef": {
+          "type": "string",
+          "description": "File name, URI string, or Twitch VOD URL."
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "description": "Total stream duration in seconds."
+        },
+        "clipCount": {
+          "type": "integer",
+          "description": "Number of highlight clips extracted."
+        },
+        "peakHypeScore": {
+          "type": "integer",
+          "description": "Highest engagement score detected in the stream (0-100)."
+        },
+        "summary": {
+          "type": "string",
+          "description": "AI-generated stream highlight recap."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ANALYZING", "READY", "FAILED"],
+          "description": "Processing status of the AI scan."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when scan started."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) of last update."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "channelName",
+        "sourceType",
+        "sourceRef",
+        "durationSeconds",
+        "clipCount",
+        "peakHypeScore",
+        "summary",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "HighlightClip": {
+      "title": "HighlightClip",
+      "description": "An AI-detected engaging highlight segment ready for preview, trimming, and export.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID of the owner."
+        },
+        "streamId": {
+          "type": "string",
+          "description": "Parent StreamAnalysis document ID."
+        },
+        "streamTitle": {
+          "type": "string",
+          "description": "Denormalized parent stream title."
+        },
+        "channelName": {
+          "type": "string",
+          "description": "Denormalized Twitch channel handle."
+        },
+        "title": {
+          "type": "string",
+          "description": "Viral clip title."
+        },
+        "hookCaption": {
+          "type": "string",
+          "description": "Short vertical-video hook overlay caption."
+        },
+        "engagementReason": {
+          "type": "string",
+          "description": "AI rationale for why this moment drives engagement."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "CLUTCH_PLAY",
+            "FUNNY_REACTION",
+            "CHAT_SPIKE",
+            "FAIL_MOMENT",
+            "BOSS_KILL",
+            "HIGHLIGHT"
+          ],
+          "description": "Highlight classification."
+        },
+        "startSec": {
+          "type": "integer",
+          "description": "Clip start timestamp in seconds."
+        },
+        "endSec": {
+          "type": "integer",
+          "description": "Clip end timestamp in seconds."
+        },
+        "hypeScore": {
+          "type": "integer",
+          "description": "Predicted engagement score (0-100)."
+        },
+        "starred": {
+          "type": "boolean",
+          "description": "Whether the user favorited this clip."
+        },
+        "exported": {
+          "type": "boolean",
+          "description": "Whether the user exported or shared this clip."
+        },
+        "localVideoUri": {
+          "type": "string",
+          "description": "Optional content URI for local VOD playback and trimming."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) at creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) of last update."
+        }
+      },
+      "required": [
+        "userId",
+        "streamId",
+        "streamTitle",
+        "channelName",
+        "title",
+        "hookCaption",
+        "engagementReason",
+        "category",
+        "startSec",
+        "endSec",
+        "hypeScore",
+        "starred",
+        "exported",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/streams/{streamId}": {
+      "schema": { "$ref": "#/entities/StreamAnalysis" },
+      "description": "User-owned Twitch stream scan sessions and AI highlight summaries."
+    },
+    "/users/{userId}/clips/{clipId}": {
+      "schema": { "$ref": "#/entities/HighlightClip" },
+      "description": "User-owned AI-detected highlight clips linked to parent streams."
+    }
+  }
+}

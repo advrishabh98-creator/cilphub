@@ -1,0 +1,140 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidStreamAnalysis(data, userId) {
+      return data.userId is string && data.userId == userId &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+        data.channelName is string && data.channelName.size() <= 60 &&
+        data.sourceType in ['VIDEO_FILE', 'CHAT_TRANSCRIPT', 'TWITCH_URL'] &&
+        data.sourceRef is string && data.sourceRef.size() <= 500 &&
+        data.durationSeconds is int && data.durationSeconds >= 0 && data.durationSeconds <= 86400 &&
+        data.clipCount is int && data.clipCount >= 0 && data.clipCount <= 500 &&
+        data.peakHypeScore is int && data.peakHypeScore >= 0 && data.peakHypeScore <= 100 &&
+        data.summary is string && data.summary.size() <= 1000 &&
+        data.status in ['ANALYZING', 'READY', 'FAILED'] &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidHighlightClip(data, userId) {
+      return data.userId is string && data.userId == userId &&
+        isValidId(data.streamId) &&
+        data.streamTitle is string && data.streamTitle.size() >= 1 && data.streamTitle.size() <= 120 &&
+        data.channelName is string && data.channelName.size() <= 60 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+        data.hookCaption is string && data.hookCaption.size() <= 180 &&
+        data.engagementReason is string && data.engagementReason.size() <= 500 &&
+        data.category in ['CLUTCH_PLAY', 'FUNNY_REACTION', 'CHAT_SPIKE', 'FAIL_MOMENT', 'BOSS_KILL', 'HIGHLIGHT'] &&
+        data.startSec is int && data.startSec >= 0 && data.startSec <= 86400 &&
+        data.endSec is int && data.endSec > data.startSec && data.endSec <= 86400 &&
+        data.hypeScore is int && data.hypeScore >= 0 && data.hypeScore <= 100 &&
+        data.starred is bool &&
+        data.exported is bool &&
+        (!('localVideoUri' in data) || (data.localVideoUri is string && data.localVideoUri.size() <= 500)) &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/streams/{streamId} {
+      allow get: if isOwner(userId) && isValidId(streamId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+        isValidId(streamId) &&
+        incoming().keys().hasAll([
+          'userId', 'title', 'channelName', 'sourceType', 'sourceRef',
+          'durationSeconds', 'clipCount', 'peakHypeScore', 'summary', 'status',
+          'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'title', 'channelName', 'sourceType', 'sourceRef',
+          'durationSeconds', 'clipCount', 'peakHypeScore', 'summary', 'status',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidStreamAnalysis(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+        isValidId(streamId) &&
+        isValidStreamAnalysis(incoming(), userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().sourceType == existing().sourceType &&
+        (
+          (existing().status == 'ANALYZING' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'durationSeconds', 'clipCount', 'peakHypeScore', 'summary', 'title', 'updatedAt'
+            ])) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'channelName', 'clipCount', 'peakHypeScore', 'summary', 'updatedAt'
+          ]))
+        );
+
+      allow delete: if isOwner(userId) && isValidId(streamId);
+    }
+
+    match /users/{userId}/clips/{clipId} {
+      allow get: if isOwner(userId) && isValidId(clipId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+        isValidId(clipId) &&
+        incoming().keys().hasAll([
+          'userId', 'streamId', 'streamTitle', 'channelName', 'title',
+          'hookCaption', 'engagementReason', 'category', 'startSec', 'endSec',
+          'hypeScore', 'starred', 'exported', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'streamId', 'streamTitle', 'channelName', 'title',
+          'hookCaption', 'engagementReason', 'category', 'startSec', 'endSec',
+          'hypeScore', 'starred', 'exported', 'localVideoUri', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidHighlightClip(incoming(), userId) &&
+        (
+          exists(/databases/$(database)/documents/users/$(userId)/streams/$(incoming().streamId)) ||
+          existsAfter(/databases/$(database)/documents/users/$(userId)/streams/$(incoming().streamId))
+        );
+
+      allow update: if isOwner(userId) &&
+        isValidId(clipId) &&
+        isValidHighlightClip(incoming(), userId) &&
+        incoming().userId == existing().userId &&
+        incoming().streamId == existing().streamId &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['starred', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['exported', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'hookCaption', 'category', 'startSec', 'endSec', 'updatedAt'
+          ])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(clipId);
+    }
+  }
+}

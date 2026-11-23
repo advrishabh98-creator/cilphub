@@ -1,0 +1,6 @@
+{
+  "name": "ClipPulse",
+  "description": "Automated AI clipping app for Twitch streams that detects and highlights the most engaging moments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
